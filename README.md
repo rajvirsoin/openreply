@@ -1,88 +1,86 @@
-<div align="center">
+# InstaReply
 
-<h1>📩 instagram-comment-to-dm</h1>
+Open-source Instagram comment-to-DM automation for businesses, creators, and agencies.
 
-<p>
-  <strong>Open-source Instagram comment → auto DM automation.</strong><br/>
-  Someone comments a keyword on your post. They instantly get a DM. That's it.
-</p>
+InstaReply turns comments like `LINK`, `PRICE`, or `GUIDE` into Meta-compliant private replies. The core engine is MIT licensed and self-hostable. The hosted SaaS layer is being built for agencies that want campaign templates, analytics, client reports, and managed reliability.
 
-<p>
-  <a href="https://visitor-badge.laobi.icu/badge?page_id=im-anishraj.instagram-comment-to-dm">
-  <img src="https://visitor-badge.laobi.icu/badge?page_id=im-anishraj.instagram-comment-to-dm" />
-</a>
-    <img src="https://img.shields.io/github/stars/im-anishraj/instagram-comment-to-dm?style=flat-square&color=6366F1" alt="Stars"/>
-  </a>
-  <a href="https://github.com/im-anishraj/instagram-comment-to-dm/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT License"/>
-  </a>
-  <a href="https://github.com/im-anishraj/instagram-comment-to-dm/issues">
-    <img src="https://img.shields.io/github/issues/im-anishraj/instagram-comment-to-dm?style=flat-square" alt="Issues"/>
-  </a>
-  <img src="https://img.shields.io/badge/Meta%20Graph%20API-v19%2B-blue?style=flat-square" alt="Meta Graph API"/>
-  <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square" alt="Next.js 16"/>
-</p>
+[Roadmap](ROADMAP.md) | [Deployment](DEPLOYMENT.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md) | [Open-core model](docs/open-core.md)
 
-<p>
-  <a href="#-demo">Demo</a> ·
-  <a href="#-features">Features</a> ·
-  <a href="#-quick-start">Quick Start</a> ·
-  <a href="#-how-it-works">How It Works</a> ·
-  <a href="#-deployment">Deploy</a> ·
-  <a href="#-contributing">Contributing</a>
-</p>
+## Why This Exists
 
-</div>
+Instagram comment-to-DM is one of the clearest social-commerce loops:
 
----
-
-## What Is This?
-
-**instagram-comment-to-dm** is a self-hostable, open-source alternative to ManyChat's comment automation feature.
-
-When someone comments a specific keyword (like "LINK", "PRICE", or "INFO") on your Instagram post, this tool automatically sends them a DM — instantly, 24/7, without you touching anything.
-
-It uses only the **official Meta Graph API** (no scraping, no unofficial bots, no ToS violations).
-
-```
-User comments "LINK" on your post
-        ↓
-Webhook fires → keyword matched
-        ↓
-DM sent via Meta Messaging API
-        ↓
-User gets your message in their inbox
+```text
+Customer comments "LINK" on a post or reel
+Meta sends a webhook
+InstaReply matches the keyword
+The worker sends a private reply using the comment ID
+The business gets a warm conversation
 ```
 
----
+Most tools in this market are broad chatbot platforms. InstaReply is intentionally narrower: a focused campaign operating system for Instagram comment-triggered DMs.
 
-## ✨ Features
+## Current Product
 
-- 🔑 **Keyword triggers** — Set any word(s) to trigger a DM (case-insensitive)
-- 💬 **Personalised DMs** — Use `{username}` merge tags in your message
-- 🚦 **Rate limit safe** — Built-in queue caps at 190 DMs/hour (Meta's limit)
-- 🔁 **Deduplication** — Never sends the same user the same DM twice
-- 🔒 **Official API only** — Meta Graph API v19+, no account ban risk
-- 📊 **Dashboard** — See which automations are firing and how many DMs sent
-- 🔄 **Token auto-refresh** — Never lose access due to expired Instagram tokens
-- 🐳 **Self-hostable** — Run it on your own server with Docker
-- 🆓 **Free & open source** — MIT license, fork and modify freely
-- 🏢 **Multi-tenant ready** — SaaS architecture supports multiple Instagram accounts
+- Email magic-link signup with workspace tenancy.
+- Instagram professional account connection as an integration.
+- Keyword automations for posts and reels.
+- Meta webhook verification and event storage.
+- BullMQ worker for private reply delivery.
+- Idempotent DM logs per automation/comment.
+- Stripe Checkout, Customer Portal, and subscription webhooks.
+- Plan limits for automations and monthly DMs.
+- Vercel cron for token refresh and usage maintenance.
+- Production deployment docs for Vercel, Railway, Postgres, and Redis.
 
----
+## Demo
 
-## 🚀 Quick Start
+The landing page is available locally at:
 
-### Prerequisites
+```bash
+npm run dev
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
+Screenshots and GIFs are planned in issue [#6](https://github.com/im-anishraj/instagram-comment-to-dm/issues/6). Good launch assets to add:
+
+- Landing page hero screenshot.
+- Dashboard overview screenshot.
+- Automation builder screenshot.
+- Logs page screenshot.
+- 30 second "comment LINK -> private reply" demo GIF using a Meta test account.
+
+## Hosted SaaS
+
+The hosted product will focus on agencies and campaign teams:
+
+- Managed Vercel/Railway infrastructure.
+- Public campaign templates.
+- Tracked links and click analytics.
+- Shareable client reports.
+- Multi-account agency workspaces.
+- Priority support and onboarding.
+
+The core remains public so builders can self-host, audit, fork, and contribute.
+
+## Self-Host Quick Start
+
+### Requirements
 
 - Node.js 20+
-- Instagram **Business or Creator** account
-- Facebook Page linked to your Instagram
-- Meta Developer App (free to create at [developers.facebook.com](https://developers.facebook.com))
-- PostgreSQL database
-- Redis instance
+- PostgreSQL
+- Redis
+- Meta Developer App
+- Instagram Business or Creator account
+- Resend account for magic-link email
+- Stripe account for subscriptions
 
-### 1. Clone & Install
+### Install
 
 ```bash
 git clone https://github.com/im-anishraj/instagram-comment-to-dm.git
@@ -90,192 +88,104 @@ cd instagram-comment-to-dm
 npm install
 ```
 
-### 2. Start Local Services
+### Start Services
 
 ```bash
-docker-compose up -d   # starts Postgres + Redis
+docker-compose up -d
 ```
 
-### 3. Set Up Environment
+### Configure Environment
 
 ```bash
 cp .env.example .env
-# Fill in your Meta App credentials (see Environment Variables section)
 ```
 
-### 4. Run Database Migrations
+Fill in all required values:
+
+- `DATABASE_URL`
+- `REDIS_URL`
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
+- `CRON_SECRET`
+- `ENCRYPTION_KEY`
+- `RESEND_API_KEY`
+- `EMAIL_FROM`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_PRO`
+- `STRIPE_PRICE_AGENCY`
+- `META_GRAPH_API_VERSION`
+- `INSTAGRAM_APP_ID`
+- `INSTAGRAM_APP_SECRET`
+- `FACEBOOK_APP_SECRET`
+- `WEBHOOK_VERIFY_TOKEN`
+
+Generate `ENCRYPTION_KEY` with:
 
 ```bash
-npx prisma migrate dev
+openssl rand -hex 32
 ```
 
-### 5. Start the App
+### Database
+
+```bash
+npm run db:generate
+npm run db:migrate
+```
+
+### Run Web And Worker
 
 ```bash
 npm run dev
+npm run worker
 ```
 
-App runs at `http://localhost:3000`.
+For production deployment, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
----
+## Roadmap
 
-## 🏗️ How It Works
+The public launch roadmap is tracked in GitHub issues:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         FLOW OVERVIEW                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Instagram Post                                                 │
-│       │                                                         │
-│  User comments "LINK"                                           │
-│       │                                                         │
-│       ▼                                                         │
-│  Meta Webhook ──► POST /api/webhook                             │
-│                        │                                        │
-│               Signature verified                                │
-│                        │                                        │
-│               Job added to BullMQ queue                         │
-│                        │                                        │
-│               ┌─────────────────┐                              │
-│               │   DM Worker     │                              │
-│               │                 │                              │
-│               │ 1. Match keyword│                              │
-│               │ 2. Check dedup  │                              │
-│               │ 3. Check rate   │                              │
-│               │    limit        │                              │
-│               │ 4. Send DM via  │                              │
-│               │    Graph API    │                              │
-│               │ 5. Log result   │                              │
-│               └─────────────────┘                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+- [#7 Production readiness](https://github.com/im-anishraj/instagram-comment-to-dm/issues/7)
+- [#8 Campaign OS repositioning](https://github.com/im-anishraj/instagram-comment-to-dm/issues/8)
+- [#9 Public campaign templates](https://github.com/im-anishraj/instagram-comment-to-dm/issues/9)
+- [#10 Tracked links and analytics](https://github.com/im-anishraj/instagram-comment-to-dm/issues/10)
+- [#11 Shareable client reports](https://github.com/im-anishraj/instagram-comment-to-dm/issues/11)
+- [#12 Agency multi-account support](https://github.com/im-anishraj/instagram-comment-to-dm/issues/12)
+- [#13 Founding agency offer and referrals](https://github.com/im-anishraj/instagram-comment-to-dm/issues/13)
+- [#14 SEO landing pages](https://github.com/im-anishraj/instagram-comment-to-dm/issues/14)
 
-### Tech Stack
+See [ROADMAP.md](ROADMAP.md) for the grouped plan.
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16 (App Router) |
-| Database | PostgreSQL + Prisma ORM |
-| Queue | BullMQ + Redis |
-| Auth | NextAuth.js v5 |
-| Instagram API | Meta Graph API v19+ |
-| Deployment | Vercel + Railway |
+## Good First Issues
 
----
+Want to help? Start with the public issue list:
 
-## ⚙️ Environment Variables
+- [Good first issues](https://github.com/im-anishraj/instagram-comment-to-dm/issues?q=is%3Aissue+is%3Aopen+label%3Atype%3Agood-first-issue)
+- [Documentation issues](https://github.com/im-anishraj/instagram-comment-to-dm/issues?q=is%3Aissue+is%3Aopen+label%3Atype%3Adocs)
+- [Template issues](https://github.com/im-anishraj/instagram-comment-to-dm/issues?q=is%3Aissue+is%3Aopen+label%3Aarea%3Atemplates)
+
+If you build a campaign template that works for your niche, open an issue or pull request.
+
+## Development Checks
+
+Every pull request should pass:
 
 ```bash
-# Meta / Instagram
-INSTAGRAM_APP_ID=               # From Meta Developer Dashboard
-INSTAGRAM_APP_SECRET=           # From Meta Developer Dashboard
-FACEBOOK_APP_SECRET=            # Same as above
-WEBHOOK_VERIFY_TOKEN=           # Any random string you choose
-
-# Database
-DATABASE_URL=                   # postgresql://user:pass@host:5432/instrareply
-
-# Redis
-REDIS_URL=                      # redis://localhost:6379
-
-# Auth
-NEXTAUTH_SECRET=                # Random 32+ char string (openssl rand -base64 32)
-NEXTAUTH_URL=                   # https://yourdomain.com
-
-# Security
-ENCRYPTION_KEY=                 # 32-byte hex for AES-256 token encryption
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
 
-See [`.env.example`](.env.example) for the full reference.
+## Community
 
----
+- Use GitHub Issues for bugs, roadmap tasks, and feature requests.
+- Use GitHub Discussions for launch ideas, self-hosting questions, and campaign templates.
+- Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-## 📦 Deployment
+## License
 
-### One-Click (Vercel + Railway)
+MIT. See [LICENSE](LICENSE).
 
-Full step-by-step guide in [`DEPLOYMENT.md`](DEPLOYMENT.md).
-
-**TL;DR:**
-1. Deploy Postgres + Redis on [Railway](https://railway.app) (free tier works)
-2. Deploy app on [Vercel](https://vercel.com) (free tier works)
-3. Add your env vars
-4. Register your webhook URL in Meta Developer Dashboard
-5. Done
-
-### Self-Host with Docker
-
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
-
----
-
-## 🔐 Meta App Review
-
-To use this with accounts other than your own (public SaaS), you need Meta App Review approval for `instagram_business_manage_messages`.
-
-A complete App Review submission guide with use case description, screen recording script, and compliance statements is included in [`META_APP_REVIEW.md`](META_APP_REVIEW.md).
-
-For **your own account only**: development mode is sufficient — no review needed.
-
----
-
-## ⚠️ Important Limitations
-
-| Limitation | Detail |
-|---|---|
-| Account type | Must be Business or Creator account |
-| Rate limit | 200 DMs per hour, hard cap by Meta |
-| 24-hour window | Can only DM within 24h of a user's interaction |
-| App Review | Required before serving other accounts (7–30 days) |
-| Official API only | Any Selenium/unofficial method risks permanent ban |
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome. Please open an issue first to discuss what you'd like to change.
-
-```bash
-# Fork the repo, then:
-git checkout -b feature/your-feature
-git commit -m "feat: add your feature"
-git push origin feature/your-feature
-# Open a Pull Request
-```
-
-**Good first issues:** look for the `good first issue` label.
-
----
-
-## 📄 License
-
-MIT — see [LICENSE](LICENSE). Use it, fork it, sell it. Just keep the license file.
-
----
-
-## 🙋 FAQ
-
-**Is this against Instagram's Terms of Service?**
-No. This uses only the official Meta Graph API with approved permissions. It's the same API ManyChat uses.
-
-**Do I need to pay Meta?**
-No. The Graph API is free. You pay only for your server hosting (Railway/Vercel free tiers work fine to start).
-
-**What happens when Meta changes their API?**
-The codebase targets Graph API v19+. Meta maintains backward compatibility for 2 years. Watch this repo for updates.
-
-**Can I use this for client accounts?**
-Yes, after passing Meta App Review. Before that, only for your own linked account.
-
-**Isn't ManyChat easier?**
-Yes. ManyChat is the right choice if you don't want to self-host. This project is for developers who want control, no monthly fees, or want to build their own SaaS on top.
-
----
-
-<div align="center">
-  <p>If this saved you money on ManyChat, consider giving it a ⭐</p>
-</div>
+The open-source core is MIT licensed. The hosted SaaS, managed infrastructure, support, and future agency features are monetized separately. See [docs/open-core.md](docs/open-core.md).
