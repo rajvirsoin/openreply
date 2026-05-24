@@ -119,6 +119,7 @@ First 30 days:
 - 20 self-host attempts.
 - 10 agencies on waitlist or beta.
 - 8 working campaign templates.
+- 1 campaign with tracked link clicks and CTR.
 - 1 verified real Instagram private reply flow.
 
 First 90 days:

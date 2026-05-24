@@ -84,6 +84,8 @@ model Workspace {
   instagramAccounts InstagramAccount[]
   automations       Automation[]
   dmLogs            DmLog[]
+  trackedLinks      TrackedLink[]
+  linkClicks        LinkClick[]
   webhookEvents     WebhookEvent[]
   billingEvents     BillingEvent[]
   operationalEvents OperationalEvent[]
@@ -120,6 +122,7 @@ model InstagramAccount {
   workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   automations Automation[]
   dmLogs      DmLog[]
+  linkClicks  LinkClick[]
 
   @@index([workspaceId])
 }
@@ -144,6 +147,8 @@ model Automation {
   workspace        Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   instagramAccount InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
   dmLogs           DmLog[]
+  trackedLinks     TrackedLink[]
+  linkClicks       LinkClick[]
 
   @@index([workspaceId])
   @@index([instagramAccountId])
@@ -178,6 +183,48 @@ model DmLog {
   @@index([automationId])
   @@index([instagramAccountId])
   @@index([status])
+}
+
+model TrackedLink {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  automationId   String
+  slug           String   @unique
+  label          String?
+  destinationUrl String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  automation Automation  @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  clicks     LinkClick[]
+
+  @@index([workspaceId])
+  @@index([automationId])
+}
+
+model LinkClick {
+  id                 String   @id @default(cuid())
+  workspaceId        String
+  automationId       String
+  instagramAccountId String
+  trackedLinkId      String
+  ipHash             String?
+  userAgent          String?
+  referrer           String?
+  createdAt          DateTime @default(now())
+
+  workspace        Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  automation       Automation       @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  instagramAccount InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
+  trackedLink      TrackedLink      @relation(fields: [trackedLinkId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([automationId])
+  @@index([instagramAccountId])
+  @@index([trackedLinkId])
+  @@index([createdAt])
+  @@index([workspaceId, createdAt])
 }
 
 model WebhookEvent {

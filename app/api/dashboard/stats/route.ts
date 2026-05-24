@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getCurrentWorkspaceId } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
 import { getEffectivePlan, PLAN_LIMITS } from "@/lib/billing/plans";
+import {
+  calculateCtr,
+  normalizeTopKeywords,
+  summarizeDmStatuses,
+} from "@/lib/tracking/analytics";
 
 export async function GET() {
   const workspaceId = await getCurrentWorkspaceId();
@@ -27,6 +32,10 @@ export async function GET() {
     dmsSentWeek,
     dmsSentMonth,
     totalDMs,
+    dmStatusCountsThisMonth,
+    clicksThisMonth,
+    totalClicks,
+    topKeywordRows,
     recentLogs,
   ] = await Promise.all([
     prisma.workspace.findUnique({
@@ -60,6 +69,20 @@ export async function GET() {
       where: { workspaceId, status: "SENT", createdAt: { gte: monthStart } },
     }),
     prisma.dmLog.count({ where: { workspaceId, status: "SENT" } }),
+    prisma.dmLog.groupBy({
+      by: ["status"],
+      where: { workspaceId, createdAt: { gte: monthStart } },
+      _count: { _all: true },
+    }),
+    prisma.linkClick.count({
+      where: { workspaceId, createdAt: { gte: monthStart } },
+    }),
+    prisma.linkClick.count({ where: { workspaceId } }),
+    prisma.dmLog.groupBy({
+      by: ["matchedKeyword"],
+      where: { workspaceId, matchedKeyword: { not: null } },
+      _count: { _all: true },
+    }),
     prisma.dmLog.findMany({
       where: { workspaceId },
       orderBy: { createdAt: "desc" },
@@ -92,6 +115,18 @@ export async function GET() {
   const effectivePlan = workspace
     ? getEffectivePlan(workspace.plan, workspace.subscriptionStatus)
     : "FREE";
+  const monthlyStatusSummary = summarizeDmStatuses(
+    dmStatusCountsThisMonth.map((row) => ({
+      status: row.status,
+      _count: row._count._all,
+    }))
+  );
+  const topKeywords = normalizeTopKeywords(
+    topKeywordRows.map((row) => ({
+      matchedKeyword: row.matchedKeyword,
+      _count: row._count._all,
+    }))
+  );
 
   return NextResponse.json({
     success: true,
@@ -105,7 +140,13 @@ export async function GET() {
       dmsSentToday,
       dmsSentWeek,
       dmsSentMonth,
+      dmsSkippedMonth: monthlyStatusSummary.skipped,
+      dmsFailedMonth: monthlyStatusSummary.failed,
       totalDMs,
+      clicksThisMonth,
+      totalClicks,
+      ctrThisMonth: calculateCtr(clicksThisMonth, dmsSentMonth),
+      topKeywords,
       dailyDMs,
       recentLogs,
     },

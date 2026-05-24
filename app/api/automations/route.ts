@@ -3,6 +3,9 @@ import { z } from "zod";
 import { getCurrentWorkspaceId } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
 import { getEffectivePlan, PLAN_LIMITS } from "@/lib/billing/plans";
+import { calculateCtr, normalizeTopKeywords } from "@/lib/tracking/analytics";
+import { buildTrackedUrl } from "@/lib/tracking/message";
+import { generateTrackedLinkSlug } from "@/lib/tracking/server";
 
 const createAutomationSchema = z.object({
   name: z.string().min(1).max(100),
@@ -11,6 +14,7 @@ const createAutomationSchema = z.object({
   postUrl: z.string().url().optional().nullable(),
   keywords: z.array(z.string().min(1).max(50)).min(1).max(10),
   dmMessage: z.string().min(1).max(1000),
+  trackedDestinationUrl: z.string().url().optional().nullable(),
   isActive: z.boolean().optional().default(true),
   wholeWordMatch: z.boolean().optional().default(true),
 });
@@ -42,11 +46,111 @@ export async function GET() {
       _count: {
         select: { dmLogs: true },
       },
+      trackedLinks: {
+        select: {
+          id: true,
+          slug: true,
+          label: true,
+          destinationUrl: true,
+          _count: { select: { clicks: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ success: true, data: automations });
+  const [statusCounts, clickCounts, keywordCounts] = await Promise.all([
+    prisma.dmLog.groupBy({
+      by: ["automationId", "status"],
+      where: { workspaceId },
+      _count: { _all: true },
+    }),
+    prisma.linkClick.groupBy({
+      by: ["automationId"],
+      where: { workspaceId },
+      _count: { _all: true },
+    }),
+    prisma.dmLog.groupBy({
+      by: ["automationId", "matchedKeyword"],
+      where: { workspaceId, matchedKeyword: { not: null } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const analytics = new Map<
+    string,
+    {
+      sent: number;
+      skipped: number;
+      failed: number;
+      clicks: number;
+      topKeywords: { keyword: string; count: number }[];
+    }
+  >();
+
+  for (const automation of automations) {
+    analytics.set(automation.id, {
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+      clicks: 0,
+      topKeywords: [],
+    });
+  }
+
+  for (const row of statusCounts) {
+    const item = analytics.get(row.automationId);
+    if (!item) continue;
+    const count = row._count._all;
+    if (row.status === "SENT") item.sent += count;
+    if (row.status === "FAILED") item.failed += count;
+    if (row.status.startsWith("SKIPPED_")) item.skipped += count;
+  }
+
+  for (const row of clickCounts) {
+    const item = analytics.get(row.automationId);
+    if (item) item.clicks = row._count._all;
+  }
+
+  for (const automation of automations) {
+    const item = analytics.get(automation.id);
+    if (!item) continue;
+    item.topKeywords = normalizeTopKeywords(
+      keywordCounts
+        .filter((row) => row.automationId === automation.id)
+        .map((row) => ({
+          matchedKeyword: row.matchedKeyword,
+          _count: row._count._all,
+        })),
+      3
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    data: automations.map((automation) => {
+      const item = analytics.get(automation.id) ?? {
+        sent: 0,
+        skipped: 0,
+        failed: 0,
+        clicks: 0,
+        topKeywords: [],
+      };
+
+      return {
+        ...automation,
+        trackedLinks: automation.trackedLinks.map((link) => ({
+          ...link,
+          trackedUrl: buildTrackedUrl(link.slug),
+        })),
+        analytics: {
+          ...item,
+          ctr: calculateCtr(item.clicks, item.sent),
+        },
+      };
+    }),
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -114,11 +218,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const { trackedDestinationUrl, ...automationData } = parsed.data;
+
   const automation = await prisma.automation.create({
     data: {
-      ...parsed.data,
+      ...automationData,
       workspaceId,
       instagramAccountId: instagramAccount.id,
+      ...(trackedDestinationUrl
+        ? {
+            trackedLinks: {
+              create: {
+                workspaceId,
+                slug: generateTrackedLinkSlug(),
+                label: "Primary campaign link",
+                destinationUrl: trackedDestinationUrl,
+              },
+            },
+          }
+        : {}),
+    },
+    include: {
+      trackedLinks: true,
     },
   });
 

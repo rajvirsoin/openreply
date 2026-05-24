@@ -118,6 +118,7 @@ const mockAutomation = {
   workspace: {
     id: "workspace_123",
   },
+  trackedLinks: [],
 };
 
 const mockJobData = {
@@ -201,6 +202,13 @@ describe("DM Worker — Full Pipeline", () => {
       include: {
         instagramAccount: true,
         workspace: true,
+        trackedLinks: {
+          select: {
+            slug: true,
+            destinationUrl: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -410,6 +418,31 @@ describe("DM Worker — Full Pipeline", () => {
       "ig_456",
       "comment_555",
       "Hey there! Here is the link: https://example.com"
+    );
+  });
+
+  it("should render tracked links into private replies", async () => {
+    mockPrisma.automation.findMany.mockResolvedValue([
+      {
+        ...mockAutomation,
+        dmMessage: "Hey {username}! Here is the offer: {link}",
+        trackedLinks: [
+          {
+            slug: "abc123",
+            destinationUrl: "https://example.com",
+          },
+        ],
+      },
+    ]);
+
+    const processor = getProcessor();
+    await processor(createMockJob());
+
+    expect(mockSendPrivateReply).toHaveBeenCalledWith(
+      "decrypted_token",
+      "ig_456",
+      "comment_555",
+      "Hey commenter_user! Here is the offer: http://localhost:3000/r/abc123"
     );
   });
 });

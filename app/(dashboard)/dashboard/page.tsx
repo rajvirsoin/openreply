@@ -16,7 +16,13 @@ interface DashboardStats {
   dmsSentToday: number;
   dmsSentWeek: number;
   dmsSentMonth: number;
+  dmsSkippedMonth: number;
+  dmsFailedMonth: number;
   totalDMs: number;
+  clicksThisMonth: number;
+  totalClicks: number;
+  ctrThisMonth: number;
+  topKeywords: { keyword: string; count: number }[];
   dailyDMs: { date: string; count: number }[];
   recentLogs: Array<{
     id: string;
@@ -45,8 +51,8 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
             <div key={i} className="glass rounded-2xl p-5 h-32 animate-pulse">
               <div className="w-10 h-10 rounded-xl bg-zinc-800" />
               <div className="mt-4 h-6 w-16 bg-zinc-800 rounded" />
@@ -63,7 +69,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 stagger">
         <StatCard
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -79,31 +85,49 @@ export default function DashboardPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
             </svg>
           }
-          label="DMs Sent Today"
-          value={stats?.dmsSentToday ?? 0}
+          label="DMs Sent"
+          value={stats?.dmsSentMonth ?? 0}
         />
         <StatCard
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
           }
-          label="DMs This Week"
-          value={stats?.dmsSentWeek ?? 0}
+          label="Skipped"
+          value={stats?.dmsSkippedMonth ?? 0}
         />
         <StatCard
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
             </svg>
           }
-          label="Total DMs Sent"
-          value={stats?.totalDMs ?? 0}
+          label="Failed"
+          value={stats?.dmsFailedMonth ?? 0}
+        />
+        <StatCard
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+            </svg>
+          }
+          label="Clicks"
+          value={stats?.clicksThisMonth ?? 0}
+        />
+        <StatCard
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.63-1.033m0 0-5.25-1.313m5.25 1.313-1.313 5.25" />
+            </svg>
+          }
+          label="CTR"
+          value={`${stats?.ctrThisMonth ?? 0}%`}
         />
       </div>
 
       {/* Chart + Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
         {/* 7-Day Chart */}
         <div className="lg:col-span-3 glass rounded-2xl p-6 animate-fade-in">
           <h2 className="text-sm font-semibold text-foreground mb-6">DMs — Last 7 Days</h2>
@@ -116,6 +140,24 @@ export default function DashboardPage() {
                   style={{ height: `${Math.max((day.count / maxDM) * 100, 4)}%` }}
                 />
                 <span className="text-[10px] text-zinc-500">{day.date}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top Keywords */}
+        <div className="lg:col-span-1 glass rounded-2xl p-6 animate-fade-in">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Top Keywords</h2>
+          <div className="space-y-3">
+            {stats?.topKeywords.length === 0 && (
+              <p className="text-sm text-muted py-8">No keyword matches yet</p>
+            )}
+            {stats?.topKeywords.map((keyword) => (
+              <div key={keyword.keyword} className="flex items-center justify-between gap-3">
+                <span className="truncate text-sm font-medium text-foreground">
+                  {keyword.keyword}
+                </span>
+                <span className="text-xs text-muted">{keyword.count}</span>
               </div>
             ))}
           </div>

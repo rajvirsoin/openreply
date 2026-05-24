@@ -10,6 +10,7 @@ import {
   reserveWorkspaceDMSend,
 } from "@/lib/billing/usage";
 import { recordWorkerAlert } from "@/lib/ops/worker-health";
+import { renderMessageWithTracking } from "@/lib/tracking/message";
 
 const BACKOFF_DELAYS = [5 * 60 * 1000, 15 * 60 * 1000, 45 * 60 * 1000];
 
@@ -45,6 +46,13 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
     include: {
       instagramAccount: true,
       workspace: true,
+      trackedLinks: {
+        select: {
+          slug: true,
+          destinationUrl: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -259,10 +267,11 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
       }
     }
 
-    const dmMessage = automation.dmMessage.replace(
-      /\{username\}/gi,
-      commenterName ?? "there"
-    );
+    const dmMessage = renderMessageWithTracking({
+      message: automation.dmMessage,
+      commenterName,
+      trackedLinks: automation.trackedLinks,
+    });
 
     try {
       await sendPrivateReply(

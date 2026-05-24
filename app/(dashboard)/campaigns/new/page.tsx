@@ -11,11 +11,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import KeywordInput from "@/components/keyword-input";
 import PostPicker from "@/components/post-picker";
 import { getCampaignTemplate } from "@/lib/templates/campaign-templates";
+import {
+  extractFirstUrl,
+  replaceUrlWithTrackedPlaceholder,
+} from "@/lib/tracking/message";
 
 export default function NewCampaignPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedTemplate = getCampaignTemplate(searchParams.get("template"));
+  const templateDestinationUrl = selectedTemplate
+    ? extractFirstUrl(selectedTemplate.dmMessage)
+    : null;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +34,17 @@ export default function NewCampaignPage() {
   const [keywords, setKeywords] = useState<string[]>(
     selectedTemplate?.keywords ?? []
   );
-  const [dmMessage, setDmMessage] = useState(selectedTemplate?.dmMessage ?? "");
+  const [dmMessage, setDmMessage] = useState(
+    selectedTemplate
+      ? replaceUrlWithTrackedPlaceholder(
+          selectedTemplate.dmMessage,
+          templateDestinationUrl
+        )
+      : ""
+  );
+  const [trackedDestinationUrl, setTrackedDestinationUrl] = useState(
+    templateDestinationUrl ?? ""
+  );
   const [wholeWordMatch, setWholeWordMatch] = useState(true);
   const [isActive, setIsActive] = useState(true);
 
@@ -63,6 +80,7 @@ export default function NewCampaignPage() {
           postUrl: postUrl ?? null,
           keywords,
           dmMessage,
+          trackedDestinationUrl: trackedDestinationUrl || null,
           wholeWordMatch,
           isActive,
         }),
@@ -196,6 +214,36 @@ export default function NewCampaignPage() {
             Use <code className="px-1 py-0.5 rounded bg-surface-hover text-accent font-mono text-[11px]">{"{username}"}</code> to
             personalize with the commenter&apos;s name
           </p>
+        </div>
+
+        {/* Tracked Link */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-foreground">
+            Tracked Destination URL
+          </label>
+          <input
+            type="url"
+            value={trackedDestinationUrl}
+            onChange={(e) => setTrackedDestinationUrl(e.target.value)}
+            placeholder="https://yourlink.com/offer"
+            className="w-full px-4 py-3 rounded-xl bg-surface border border-border text-sm text-foreground placeholder:text-zinc-500 focus:border-accent/40 focus:outline-none transition-colors"
+          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted">
+              Add <code className="px-1 py-0.5 rounded bg-surface-hover text-accent font-mono text-[11px]">{"{link}"}</code> to send the tracked redirect.
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setDmMessage((current) =>
+                  current.includes("{link}") ? current : `${current.trim()} {link}`.trim()
+                )
+              }
+              className="inline-flex items-center justify-center rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-border-hover hover:text-foreground"
+            >
+              Insert link token
+            </button>
+          </div>
         </div>
 
         {/* Options */}

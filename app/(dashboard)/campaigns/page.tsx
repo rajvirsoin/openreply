@@ -21,6 +21,21 @@ interface Campaign {
   wholeWordMatch: boolean;
   createdAt: string;
   _count: { dmLogs: number };
+  trackedLinks: Array<{
+    id: string;
+    slug: string;
+    destinationUrl: string;
+    trackedUrl: string;
+    _count: { clicks: number };
+  }>;
+  analytics: {
+    sent: number;
+    skipped: number;
+    failed: number;
+    clicks: number;
+    ctr: number;
+    topKeywords: { keyword: string; count: number }[];
+  };
 }
 
 export default function CampaignsPage() {
@@ -163,11 +178,55 @@ export default function CampaignsPage() {
                 <p className="text-sm text-muted truncate">&ldquo;{auto.dmMessage}&rdquo;</p>
 
                 {/* Stats */}
-                <div className="flex items-center gap-4 mt-3 text-xs text-zinc-500">
-                  <span>{auto._count.dmLogs} DMs sent</span>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-zinc-500">
+                  <span>{auto.analytics.sent} sent</span>
+                  <span>·</span>
+                  <span>{auto.analytics.skipped} skipped</span>
+                  <span>·</span>
+                  <span>{auto.analytics.failed} failed</span>
+                  <span>·</span>
+                  <span>{auto.analytics.clicks} clicks</span>
+                  <span>·</span>
+                  <span>{auto.analytics.ctr}% CTR</span>
                   <span>·</span>
                   <span>{auto.wholeWordMatch ? "Whole word" : "Partial match"}</span>
                 </div>
+
+                {auto.trackedLinks[0] && (
+                  <div className="mt-4 rounded-xl border border-border bg-surface/70 p-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                          Tracked link
+                        </p>
+                        <p className="mt-1 truncate text-xs text-muted">
+                          {auto.trackedLinks[0].trackedUrl}
+                        </p>
+                      </div>
+                      <a
+                        href={auto.trackedLinks[0].trackedUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex shrink-0 items-center justify-center rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-border-hover hover:text-foreground"
+                      >
+                        Open
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {auto.analytics.topKeywords.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {auto.analytics.topKeywords.map((keyword) => (
+                      <span
+                        key={keyword.keyword}
+                        className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-muted"
+                      >
+                        {keyword.keyword}: {keyword.count}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
