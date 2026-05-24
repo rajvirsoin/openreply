@@ -55,6 +55,7 @@ Secondary audiences:
 - README demo section.
 - Template examples.
 - One comparison page: Manychat alternative for agencies.
+- SEO pages for templates, agencies, and comment LINK automation.
 
 ## Launch Channels
 

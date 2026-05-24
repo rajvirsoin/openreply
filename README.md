@@ -72,6 +72,7 @@ The hosted product will focus on agencies and campaign teams:
 - Shareable client reports.
 - Multi-account agency workspaces.
 - Founding agency offer and referral-program plan.
+- SEO landing pages for high-intent Instagram DM automation searches.
 - Priority support and onboarding.
 
 The core remains public so builders can self-host, audit, fork, and contribute.
@@ -161,7 +162,7 @@ The public launch roadmap is tracked in GitHub issues:
 - [#11 Shareable client reports](https://github.com/im-anishraj/instagram-comment-to-dm/issues/11) - done
 - [#12 Agency multi-account support](https://github.com/im-anishraj/instagram-comment-to-dm/issues/12) - done
 - [#13 Founding agency offer and referrals](https://github.com/im-anishraj/instagram-comment-to-dm/issues/13) - done
-- [#14 SEO landing pages](https://github.com/im-anishraj/instagram-comment-to-dm/issues/14)
+- [#14 SEO landing pages](https://github.com/im-anishraj/instagram-comment-to-dm/issues/14) - done
 
 See [ROADMAP.md](ROADMAP.md) for the grouped plan.
 

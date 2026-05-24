@@ -16,6 +16,13 @@ const navLinks = [
   { label: "Founding offer", href: "#founding-offer" },
 ];
 
+const seoLinks = [
+  { label: "Manychat alternative", href: "/manychat-alternative" },
+  { label: "Comment-to-DM templates", href: "/instagram-comment-to-dm-templates" },
+  { label: "Agencies", href: "/instagram-dm-automation-agencies" },
+  { label: "Comment LINK automation", href: "/comment-link-automation" },
+];
+
 const heroStats = [
   { value: "24/7", label: "Comment monitoring" },
   { value: "1", label: "DM per matched comment" },
@@ -796,6 +803,11 @@ export default function Home() {
               <a key={link.href} href={link.href} className="transition hover:text-white">
                 {link.label}
               </a>
+            ))}
+            {seoLinks.map((link) => (
+              <Link key={link.href} href={link.href} className="transition hover:text-white">
+                {link.label}
+              </Link>
             ))}
             <Link href="/login" className="transition hover:text-white">
               Sign in

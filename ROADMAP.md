@@ -8,7 +8,7 @@ This roadmap is optimized for three goals:
 
 ## Phase 0: Foundation
 
-Status: merged through issue [#13](https://github.com/im-anishraj/instagram-comment-to-dm/issues/13).
+Status: merged through issue [#14](https://github.com/im-anishraj/instagram-comment-to-dm/issues/14).
 
 - Email magic-link auth.
 - Workspace tenancy.
@@ -83,7 +83,7 @@ Planned work:
 
 ## Phase 6: Search And Distribution
 
-Issue: [#14 SEO landing pages](https://github.com/im-anishraj/instagram-comment-to-dm/issues/14)
+Issue: [#14 SEO landing pages](https://github.com/im-anishraj/instagram-comment-to-dm/issues/14) - done
 
 - Manychat alternative landing page.
 - Instagram comment-to-DM templates page.
