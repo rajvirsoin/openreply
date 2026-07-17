@@ -6,22 +6,30 @@ export function verifyWebhookSignature(
 ): boolean {
   if (!signature) return false;
 
-  const appSecret = process.env.FACEBOOK_APP_SECRET;
-  if (!appSecret) {
-    throw new Error("FACEBOOK_APP_SECRET environment variable is required");
-  }
+  // Instagram-Login apps sign webhooks with the Instagram app secret, while
+  // Facebook-Login apps use the Facebook app secret. Both belong to the same
+  // app, so accept a signature that matches either — this avoids a config
+  // guess about which key Meta uses for a given app type.
+  const secrets = [
+    process.env.FACEBOOK_APP_SECRET,
+    process.env.INSTAGRAM_APP_SECRET,
+  ].filter((s): s is string => Boolean(s));
 
-  const expectedSignature =
-    "sha256=" + createHmac("sha256", appSecret).update(payload).digest("hex");
-
-  try {
-    return timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
+  if (secrets.length === 0) {
+    throw new Error(
+      "FACEBOOK_APP_SECRET or INSTAGRAM_APP_SECRET is required to verify webhooks"
     );
-  } catch {
-    return false;
   }
+
+  return secrets.some((secret) => {
+    const expected =
+      "sha256=" + createHmac("sha256", secret).update(payload).digest("hex");
+    try {
+      return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+    } catch {
+      return false;
+    }
+  });
 }
 
 export interface WebhookCommentEvent {
