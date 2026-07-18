@@ -69,6 +69,9 @@ const Ico = {
   video: (c = "") => (
     <svg viewBox="0 0 24 24" className={c} {...S}><rect x="2" y="6" width="14" height="12" rx="2" /><path d="M16 10l6-3v10l-6-3z" /></svg>
   ),
+  camera: (c = "") => (
+    <svg viewBox="0 0 24 24" className={c} {...S}><path d="M3 8a2 2 0 012-2h1.2a2 2 0 001.7-1l.5-.8a2 2 0 011.7-1h3.8a2 2 0 011.7 1l.5.8a2 2 0 001.7 1H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><circle cx="12" cy="13" r="3.2" /></svg>
+  ),
 };
 
 /* ----------------------------- helpers ----------------------------- */
@@ -322,7 +325,9 @@ function DmScreen({
       </div>
 
       <div className="flex items-center gap-2 px-3 py-3">
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-accent text-xs">📷</span>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-white">
+          {Ico.camera("h-4 w-4")}
+        </span>
         <div className="flex-1 rounded-full bg-zinc-800 px-3 py-2 text-xs text-zinc-500">Message…</div>
       </div>
     </div>
