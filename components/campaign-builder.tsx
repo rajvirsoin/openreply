@@ -273,7 +273,6 @@ export default function CampaignBuilder({ mode, campaignId }: CampaignBuilderPro
     } catch {
       // ignore a malformed queue
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
