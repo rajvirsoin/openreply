@@ -20,6 +20,8 @@ export function getRedisConnection(): Redis {
 
 // ─── DM Queue ───────────────────────────────────────────────────────────────────
 
+export type CommentSource = "WEBHOOK" | "POLLING";
+
 export interface ProcessCommentJob {
   instagramAccountId: string;
   commentId: string;
@@ -28,6 +30,9 @@ export interface ProcessCommentJob {
   commenterName?: string;
   mediaId: string;
   requeueAttempt?: number;
+  // Which path enqueued this comment. Recorded in the shared ProcessedComment
+  // dedup store so the reconciler can tell webhook- from polling-caught comments.
+  source?: CommentSource;
 }
 
 // Delivered when a user taps an opening DM's button — carries the reveal target.

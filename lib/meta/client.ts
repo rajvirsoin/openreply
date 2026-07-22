@@ -337,6 +337,44 @@ export async function getMediaComments(
   return data.data;
 }
 
+/**
+ * All comments on a media, following pagination cursors to the end. The polling
+ * reconciler relies on this: the single-page `getMediaComments` cuts off exactly
+ * the collapsed / non-follower comments that also never fire a webhook, which is
+ * the whole reason comments go unanswered. `max` is a safety ceiling so a viral
+ * post can't spin forever.
+ *
+ * Note: comments hidden by Instagram's own Hidden Words / spam filter may not be
+ * returned by the Graph API at all. Disable that filter on the account to widen
+ * results.
+ */
+export async function getAllMediaComments(
+  accessToken: string,
+  mediaId: string,
+  max = 2000
+): Promise<InstagramComment[]> {
+  const results: InstagramComment[] = [];
+
+  const first = new URL(`${instagramGraphBase()}/${mediaId}/comments`);
+  first.searchParams.set("fields", "id,text,from,timestamp");
+  first.searchParams.set("limit", "50");
+  first.searchParams.set("access_token", accessToken);
+
+  let nextUrl: string | null = first.toString();
+
+  while (nextUrl !== null && results.length < max) {
+    const response: Response = await fetch(nextUrl);
+    const page = await handleResponse<{
+      data: InstagramComment[];
+      paging?: { next?: string };
+    }>(response);
+    results.push(...(page.data ?? []));
+    nextUrl = page.paging?.next ?? null;
+  }
+
+  return results.slice(0, max);
+}
+
 // --- Direct message inbox (Conversations API) ---------------------------
 
 export interface InstagramParticipant {

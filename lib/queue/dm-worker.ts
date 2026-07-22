@@ -77,6 +77,21 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
     orderBy: { createdAt: "asc" },
   });
 
+  // Record this comment in the shared dedup store, whether or not it matches a
+  // campaign, so the polling reconciler never re-sweeps it. Both the webhook and
+  // the reconciler funnel through here, so this is the single write point.
+  await prisma.processedComment
+    .upsert({
+      where: { commentId },
+      create: {
+        commentId,
+        instagramAccountId,
+        source: job.data.source ?? "WEBHOOK",
+      },
+      update: {},
+    })
+    .catch(() => {});
+
   for (const automation of automations) {
     // "Any word" campaigns fire on every comment; otherwise require a keyword hit.
     const matchResult = automation.matchAnyWord
@@ -194,6 +209,50 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
         errorMessage: null,
       },
     });
+
+    // Public reply leg — decoupled from the DM and posted first so a DM failure
+    // (e.g. a non-follower whose messaging is restricted) never suppresses it.
+    // Idempotent across retries via publicReplySentAt.
+    const replyPool =
+      automation.publicReplyMessages.length > 0
+        ? automation.publicReplyMessages
+        : automation.publicReplyMessage
+          ? [automation.publicReplyMessage]
+          : [];
+    if (
+      automation.publicReplyEnabled &&
+      replyPool.length > 0 &&
+      !existingLog?.publicReplySentAt
+    ) {
+      try {
+        const chosen = replyPool[Math.floor(Math.random() * replyPool.length)];
+        const publicReply = renderMessageWithTracking({
+          message: chosen,
+          commenterName,
+          trackedLinks: automation.trackedLinks,
+        });
+        await sendCommentReply(accessToken, commentId, publicReply);
+        await prisma.dmLog.update({
+          where: {
+            automationId_commentId: { automationId: automation.id, commentId },
+          },
+          data: { publicReplySentAt: new Date(), publicReplyError: null },
+        });
+      } catch (error) {
+        console.error(
+          "[DM Worker] Public comment reply failed:",
+          formatError(error)
+        );
+        await prisma.dmLog
+          .update({
+            where: {
+              automationId_commentId: { automationId: automation.id, commentId },
+            },
+            data: { publicReplyError: formatError(error) },
+          })
+          .catch(() => {});
+      }
+    }
 
     const usage = await reserveWorkspaceDMSend(automation.workspaceId);
     if (!usage.allowed) {
@@ -355,33 +414,6 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
           errorMessage: null,
         },
       });
-
-      // Optional public reply under the comment. Best-effort: a failure here
-      // must not fail the DM job, since the private reply already succeeded.
-      // Rotate between variations so replies don't all look identical.
-      const replyPool =
-        automation.publicReplyMessages.length > 0
-          ? automation.publicReplyMessages
-          : automation.publicReplyMessage
-            ? [automation.publicReplyMessage]
-            : [];
-      if (automation.publicReplyEnabled && replyPool.length > 0) {
-        try {
-          const chosen =
-            replyPool[Math.floor(Math.random() * replyPool.length)];
-          const publicReply = renderMessageWithTracking({
-            message: chosen,
-            commenterName,
-            trackedLinks: automation.trackedLinks,
-          });
-          await sendCommentReply(accessToken, commentId, publicReply);
-        } catch (error) {
-          console.error(
-            "[DM Worker] Public comment reply failed:",
-            formatError(error)
-          );
-        }
-      }
     } catch (error) {
       await releaseWorkspaceDMReservation(
         automation.workspaceId,
