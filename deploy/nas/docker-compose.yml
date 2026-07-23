@@ -1,0 +1,137 @@
+# OpenReply — production stack for a single always-on box (Proxmox LXC, NAS,
+# VPS). Everything self-hosted: Postgres, Redis, web app, DM worker, cron,
+# nightly DB backups, and (optionally) a Cloudflare Tunnel for the public URL.
+#
+# Layout expected by install.sh:
+#   /opt/openreply/
+#   ├── docker-compose.yml   (this file, copied out of src/)
+#   ├── .env                 (all secrets; used for interpolation AND env_file)
+#   ├── src/                 (git clone of the repo)
+#   └── backups/             (nightly pg_dump archives)
+#
+# The Cloudflare Tunnel service only starts when COMPOSE_PROFILES=tunnel is
+# set in .env (install.sh does this when a tunnel token is provided).
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openreply
+      POSTGRES_USER: openreply
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openreply"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: ./src
+    image: openreply:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://openreply:${POSTGRES_PASSWORD}@postgres:5432/openreply
+      REDIS_URL: redis://redis:6379
+    ports:
+      # LAN/Tailscale access for debugging; the public URL goes through the tunnel.
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: openreply:latest
+    restart: unless-stopped
+    command: ["npx", "tsx", "worker/dm-worker.ts"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://openreply:${POSTGRES_PASSWORD}@postgres:5432/openreply
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  # Self-hosted replacement for the Vercel crons (vercel.json):
+  # - refresh-tokens daily at 05:00 (rotates Instagram long-lived tokens)
+  # - attach-next-reel every 10 min (binds "next reel" campaigns fast)
+  cron:
+    image: alpine:3.20
+    restart: unless-stopped
+    env_file: .env
+    command:
+      - sh
+      - -c
+      - |
+        cat > /etc/crontabs/root <<CRON
+        0 5 * * * wget -q -O - --header "Authorization: Bearer $${CRON_SECRET}" http://app:3000/api/cron/refresh-tokens || true
+        */10 * * * * wget -q -O - --header "Authorization: Bearer $${CRON_SECRET}" http://app:3000/api/cron/attach-next-reel || true
+        CRON
+        echo "[cron] schedule installed" && crond -f -l 8
+    depends_on:
+      app:
+        condition: service_started
+
+  # Nightly gzip pg_dump into ./backups, pruned after 14 days.
+  backup:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          sleep 60
+          now=$$(date +%Y%m%d-%H%M%S)
+          if pg_dump -h postgres -U openreply openreply | gzip > "/backups/openreply-$$now.sql.gz"; then
+            echo "[backup] wrote openreply-$$now.sql.gz"
+          else
+            echo "[backup] FAILED at $$now" >&2
+          fi
+          find /backups -name 'openreply-*.sql.gz' -mtime +14 -delete
+          sleep 86340
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Public HTTPS entrypoint. Create the tunnel in Cloudflare Zero Trust, point
+  # its public hostname at http://app:3000, and put the token in .env as
+  # CLOUDFLARE_TUNNEL_TOKEN with COMPOSE_PROFILES=tunnel.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN}"]
+    depends_on:
+      app:
+        condition: service_started
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,5 @@
+# Local-only override: 5432 is taken by listmonk_db on this Mac.
+services:
+  postgres:
+    ports: !override
+      - "127.0.0.1:5433:5432"
