@@ -54,6 +54,24 @@ interface SweepStat {
   errors: string[];
 }
 
+/**
+ * Lower-cased usernames that the account owner @mentions in its own top-level
+ * comments on a post.
+ */
+export function ownerTaggedUsernames(
+  comments: InstagramComment[],
+  ownerInstagramId: string
+): Set<string> {
+  const tagged = new Set<string>();
+  for (const c of comments) {
+    if (c.from?.id !== ownerInstagramId) continue;
+    for (const m of (c.text ?? "").matchAll(/@([A-Za-z0-9._]+)/g)) {
+      tagged.add(m[1].replace(/\.+$/, "").toLowerCase());
+    }
+  }
+  return tagged;
+}
+
 function errMessage(error: unknown): string {
   if (error instanceof MetaApiError) return `Meta ${error.code}: ${error.message}`;
   if (error instanceof Error) return error.message;
@@ -176,6 +194,11 @@ async function sweepCampaign(
       continue;
     }
 
+    // Usernames the account owner has already answered with a top-level
+    // comment that @mentions them (some teams reply that way instead of a
+    // threaded reply), so those commenters count as handled too.
+    const taggedByOwner = ownerTaggedUsernames(comments, account.instagramId);
+
     // Keep only comments that (a) aren't the account's own, (b) match the
     // keyword, and (c) have no reply from the account owner yet.
     const needsAction = comments.filter((c) => {
@@ -189,9 +212,9 @@ async function sweepCampaign(
       if (!matched) return false;
       stat.matched += 1;
 
-      const ownerReplied = (c.replies?.data ?? []).some(
-        (r) => r.from?.id === account.instagramId
-      );
+      const ownerReplied =
+        (c.replies?.data ?? []).some((r) => r.from?.id === account.instagramId) ||
+        taggedByOwner.has((c.from?.username ?? "").toLowerCase());
       if (ownerReplied) {
         stat.alreadyReplied += 1;
         return false;
